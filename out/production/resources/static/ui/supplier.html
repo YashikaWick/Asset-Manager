@@ -1,0 +1,553 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Asset Management System</title>
+    <link rel="stylesheet" href="../plugin/bootstrap/css/bootstrap.min.css"/>
+    <script src="../plugin/jquery/jquery.min.js"></script>
+    <script src="../plugin/bootstrap/js/bootstrap.min.js"></script>
+
+    <link rel="stylesheet" href="../style/common.css"/>
+    <link rel="stylesheet" href="../style/btn-bs4.css"/>
+    <script src="../script/common.bitproject.earth.lk.v1.js"></script>
+    <script src="../script/ui.bitproject.earth.lk.v1.js"></script>
+
+    <script>
+
+        window.addEventListener("load", initialize);
+
+        //Initializing Functions
+
+        function initialize() {
+
+            btnAdd.addEventListener("click",btnAddMC);
+            btnClear.addEventListener("click",btnClearMC);
+            btnUpdate.addEventListener("click",btnUpdateMC);
+            btnDelete.addEventListener("click",btnDeleteMC);
+            btnSearch.addEventListener("click",btnSearchMC);
+            btnSearchClear.addEventListener("click",btnSearchClearMC);
+
+            privilages = httpRequest("../privilages?module=SUPPLIER","GET");
+
+            regexes = httpRequest("../regexes/supplier","GET");
+            txtRegNo.setAttribute("data-pattern",regexes.regno.regex);
+            txtComName.setAttribute("data-pattern",regexes.companyName.regex);
+            txtContactName.setAttribute("data-pattern",regexes.contactName.regex);
+            txtMobile.setAttribute("data-pattern",regexes.mobile.regex);
+            txtTel.setAttribute("data-pattern",regexes.tel.regex);
+            txtEmail.setAttribute("data-pattern",regexes.email.regex);
+            txtNIC.setAttribute("data-pattern",regexes.nic.regex);
+
+            supplierstasuses = httpRequest("../supplierstatuses/list","GET");
+            employees = httpRequest("../employees/list","GET");
+
+            valid = "#c2ffb2";
+            invalid = "#ffe1e1";
+            initial = "white";
+            updated = "#fcf5b5";
+            active = "#fcf5b5";
+
+            loadView();
+            loadForm();
+
+
+
+        }
+
+        function loadView() {
+
+            //Search Area
+           /* txtSearchName.value="";
+            txtSearchNIC.value="";
+            fillCombo(cmbSearchDesignation,"Designation",designations,"name","");
+            fillCombo(cmbSearchEmployeestatus,"Status",employeestatuses,"name","");
+            cmbSearchEmployeestatus.style.background = "";
+            cmbSearchDesignation.style.background = "";
+            txtSearchName.style.background = "";
+            txtSearchNIC.style.background = "";*/
+
+
+            //Table Area
+            activerowno = "";
+            activepage = 1;
+            var query = "";
+            loadTable(1,cmbPageSize.value,query);
+        }
+
+        function loadTable(page,size,query) {
+            page = page - 1;
+            suppliers = new Array();
+            var data = httpRequest("/suppliers?page="+page+"&size="+size+query,"GET");
+            if(data.content!= undefined) suppliers = data.content;
+            createPagination('pagination',data.totalPages, data.number+1,paginate);
+            fillTable('tblSupplier',suppliers,fillForm);
+            clearSelection(tblSupplier);
+            if(activerowno!="")selectRow(tblSupplier,activerowno,active);
+            window.location.href="#ui";
+        }
+
+        function paginate(page) {
+            var paginate;
+            if(oldemployee==null){
+                paginate=true;
+            }else{
+                if(getErrors()==''&&getUpdates()==''){
+                    paginate=true;
+                }else{
+                    paginate = window.confirm("Form has Some Errors or Update Values. " +
+                        "Are you sure to discard that changes ?");
+                }
+            }
+            if(paginate) {
+                activepage=page;
+                activerowno=""
+                loadSearchedTable();
+                loadForm();
+            }
+
+        }
+
+        function loadForm() {
+            supplier = new Object();
+            oldsupplier = null;
+
+            fillCombo(cmbSupStatus,"Select Supplier Status",supplierstasuses,"name","");
+            fillCombo(cmbEmployee,"Select Employee",employees,"callingname",session.getObject("user").employeeId.callingname);
+            supplier.empIntroduced = JSON.parse(cmbEmployee.value);
+
+            //setting today's date
+            var today = new Date();
+            var month = today.getMonth()+1;
+            if(month<10) month = "0"+month;
+            var date = today.getDate()+1;
+            if(date<10) date = "0"+date;
+            dateReg.value=today.getFullYear()+"-"+month+"-"+date;
+            supplier.date=dateReg.value;
+            
+
+            txtRegNo.value = "";
+            txtComName.value = "";
+            txtContactName.value = "";
+            txtMobile.value = "";
+            txtTel.value = "";
+            txtEmail.value = "";
+            txtNIC.value = "";
+
+            setStyle(initial);
+
+            dateReg.style.background=valid;
+
+            disableButtons(false, true, true);
+        }
+
+        function setStyle(style) {
+
+            txtRegNo.style.background = style;
+            txtComName.style.background = style;
+            txtContactName.style.background = style;
+            txtMobile.style.background = style;
+            txtTel.style.background = style;
+            txtEmail.style.background = style;
+            txtNIC.style.background = style;
+            cmbSupStatus.style.background = style;
+            dateReg.style.background = style;
+            cmbEmployee.style.background = style;
+
+        }
+
+        function disableButtons(add, upd, del) {
+
+            if (add || !privilages.add) btnAdd.setAttribute("disabled", "disabled");
+            else btnAdd.removeAttribute("disabled");
+
+            if (upd || !privilages.update) btnUpdate.setAttribute("disabled", "disabled");
+            else btnUpdate.removeAttribute("disabled");
+
+            if (del || !privilages.delete) btnDelete.setAttribute("disabled", "disabled");
+            else btnDelete.removeAttribute("disabled");
+
+        }
+
+
+        // Binding and Validation Functions for Non-Regex-Based
+        // When Regex-Based default validation is used, programmers do not need to define these functions
+        // Default Validation and Binding is coded in "ui.bitproject.earth.lk.js"
+        
+
+        //Form Operation Functions
+        
+        function getErrors() {
+
+            var errors = "";
+   
+            if (supplier.regno == null)
+                errors = errors + "\n" + regexes.regno.message;
+
+            if (supplier.companyName == null)
+                errors = errors + "\n" + regexes.companyName.message;
+
+            if (supplier.contactName == null)
+                errors = errors + "\n" + regexes.contactName.message;
+
+            if (supplier.mobile == null)
+                errors = errors + "\n" + regexes.mobile.message;
+            
+            if (supplier.tel == null)
+                errors = errors + "\n" + regexes.tel.message;
+
+            if (supplier.email == null)
+                errors = errors + "\n" + regexes.email.message;
+
+            if (supplier.nic == null)
+                errors = errors + "\n" + regexes.nic.message;
+            
+            if (supplier.date == null)
+                errors = errors + "\n" + "Reg Date Invalid";
+            
+            if (supplier.supplierstatusId == null)
+                errors = errors + "\n" + "Status Not Selected";
+
+            if (supplier.empIntroduced == null)
+                errors = errors + "\n" + "Employee Not Selected";
+
+            return errors;
+            
+        }
+        
+        function btnAddMC() {
+            
+            var errors = getErrors();
+
+           if(errors=="") {
+                var option = window.confirm("Are you sure to add following Supplier ?\n" +
+                    "\nReg Number       : " + supplier.regno +
+                    "\nCompany Name     : " + supplier.companyName +
+                    "\nContact Name     : " + supplier.contactName +
+                    "\nMobile           : " + supplier.mobile +
+                    "\nTel No           : " + supplier.tel +
+                    "\nEmail            : " + supplier.email +
+                    "\nNIC              : " + supplier.nic +
+                    "\nReg Date         : " + supplier.date +
+                    "\nStatus           : " + supplier.supplierstatusId.name +
+                    "\nEmp Introduced   : " + supplier.empIntroduced.callingname);
+
+                if(option==true) {
+                  var response = httpRequest("/suppliers","POST",supplier);
+                    if(response=="0"){
+                    toast("<strong>Success !</strong> Saved Successfully","success");
+                    loadForm();
+                    activerowno = 1;
+                    loadSearchedTable();
+                    }
+                    else window.alert("Failed to Add as \n\n"+response);
+                }
+
+          }
+          else
+           { window.alert("You have following Errors\n"+errors); }
+
+        }
+
+        function btnClearMC() {
+            //Get Cofirmation from the User window.confirm();
+
+            var clear;
+            if(oldsupplier==null){
+                clear=true;
+            }else{
+                if(getErrors()==''&&getUpdates()==''){
+                    clear=true;
+                }else{
+                    clear = window.confirm("Form has Some Errors or Update Values. " +
+                        "Are you sure to discard that changes ?");
+                }
+            }
+            if(clear) {
+                loadForm();
+                clearSelection(tblSupplier);
+            }
+
+        }
+
+        function fillForm(sup,rowno){
+            activerowno = rowno;
+            var filling;
+            if(oldsupplier==null){
+                filling=true;
+            }else{
+
+                if(getErrors()==''&&getUpdates()==''){
+                    filling=true;
+                }else{
+                    filling = window.confirm("Form has Some Errors or Update Values. " +
+                        "Are you sure to discard that changes ?");
+                }
+            }
+
+            if(filling) {
+
+               clearSelection(tblSupplier);
+               selectRow(tblSupplier,activerowno,active);
+
+                supplier = JSON.parse(JSON.stringify(sup));
+                oldsupplier = JSON.parse(JSON.stringify(sup));
+
+                txtRegNo.value = supplier.regno;
+                txtComName.value = supplier.companyName;
+                txtContactName.value = supplier.contactName;
+                txtMobile.value = supplier.mobile;
+                txtTel.value = supplier.tel;
+                txtEmail.value = supplier.email;
+                txtNIC.value = supplier.nic;
+                dateReg.value = supplier.date;
+                fillCombo(cmbSupStatus,"Select Status", supplierstasuses, "name", supplier.supplierstatusId.name);
+                fillCombo(cmbEmployee, "Select Employee", employees, "callingname", supplier.empIntroduced.callingname);
+
+                disableButtons(true, false, false);
+                setStyle(valid);
+            }
+
+        }
+
+        function getUpdates() {
+
+            var updates = "";
+
+            if(supplier!=null && oldsupplier!=null) {
+
+                if (supplier.regno != oldsupplier.regno)
+                    updates = updates + "\nReg Number is Changed";
+
+                if (supplier.companyName != oldsupplier.companyName)
+                    updates = updates + "\nCompany name is Changed";
+
+                if (supplier.contactName != oldsupplier.contactName)
+                    updates = updates + "\nContact name is Changed";
+
+                if (supplier.mobile != oldsupplier.mobile)
+                    updates = updates + "\nMobile Number is Changed";
+
+                if (supplier.tel != oldsupplier.tel)
+                    updates = updates + "\nTelephone Number is Changed";
+
+                if (supplier.email != oldsupplier.email)
+                    updates = updates + "\nEmail is Changed";
+
+                if (supplier.nic != oldsupplier.nic)
+                    updates = updates + "\nNIC is Changed";
+
+                if (supplier.date != oldsupplier.date)
+                    updates = updates + "\nReg Date is Changed";
+
+                if (supplier.supplierstatusId.name != oldsupplier.supplierstatusId.name)
+                    updates = updates + "\nStatus is Changed";
+
+                if (supplier.empIntroduced.callingname != oldsupplier.empIntroduced.callingname)
+                    updates = updates + "\nEmp Introduced is Changed";
+
+            }
+
+            return updates;
+
+        }
+
+        function btnUpdateMC() {
+            var errors = getErrors();
+            if (errors == "") {
+                var updates = getUpdates();
+                if (updates == "") window.alert("Nothing Updated!");
+                else {
+
+                    var option = window.confirm("\n\nAre your sure to update followings ! \n\n" + updates);
+                    if(option==true) {
+                        var response = httpRequest("/suppliers","PUT",employee);
+                        if(response=="0"){
+                            toast("<strong>Success !</strong> Updated Successfully","success");
+                            loadForm();
+                            loadSearchedTable();
+
+                        }
+                        else window.alert("Failed to Update as \n\n"+response);
+                    }
+
+
+                }
+            }
+            else
+                window.alert("You have following errors in your form\n\n"+getErrors());
+        }
+
+        function btnDeleteMC() {
+
+
+            var option = window.confirm("\n\nAre your sure to delete following ! \n\n" +
+                "Reg number : " +supplier.regno+ "\nCompany Name : " +supplier.companyName);
+
+            if(option==true) {
+                var response = httpRequest("/suppliers","DELETE",supplier);
+                if(response=="0"){
+                    toast("<strong>Success !</strong> Deleted Successfully","success");
+                    loadForm();
+                    loadSearchedTable();
+
+                }
+                else window.alert("Failed to Delete as \n\n"+response);
+            }
+
+       }
+
+
+        //Search Functions
+
+        function loadSearchedTable() {
+
+            var name = txtSearchName.value;
+            var nic = txtSearchNIC.value;
+            var designation = cmbSearchDesignation.value;
+            var employeestatus = cmbSearchEmployeestatus.value;
+
+            var designationid="";
+            if(designation!="Designation")
+            { designationid = JSON.parse(designation).id;
+            cmbSearchDesignation.style.background = active;}
+
+            var employeestatusid="";
+            if(employeestatus!="Status")
+            {  employeestatusid = JSON.parse(employeestatus).id;
+                cmbSearchEmployeestatus.style.background = active; }
+
+            if(name!=""){  txtSearchName.style.background = active; }
+            if(nic!=""){  txtSearchNIC.style.background = active; }
+
+            var query ="&name=&nic=&designationid=&employeestatusid=";
+
+            if(name!="" || nic!="" || designationid!="" || employeestatusid!="" )
+                query = "&name=" + name + "&nic=" + nic + "&designationid=" + designationid + "&employeestatusid=" + employeestatusid;
+
+            //window.alert(query);
+            loadTable(activepage, cmbPageSize.value, query);
+
+        }
+
+        function btnSearchMC(){
+            activepage=1;
+            loadSearchedTable();
+        }
+
+        function btnSearchClearMC(){
+               loadView();
+        }
+
+    </script>
+
+
+
+</head>
+
+<body>
+<div class="container-fluid">
+    <div class="row" id="ui">
+        <div class="col-md-12">
+            <div class="panel panel-default" style="margin-top: 10px;">
+                <div class="panel-heading">
+                    <h3>Supplier Management</h3>
+                </div>
+
+                <div class="panel-body" >
+                    <div class="row">
+
+                        <div class="col-md-4" id="form">
+                            <form class="form-horizontal" onsubmit="return false" id="supplierform" >
+
+                                <script>
+                                 // Defining UI-Componnets and Layouts
+                                 // Default UI-Componnets and Layouts is coded in "ui.bitproject.earth.lk.js"
+                                 textField('supplierform','txtRegNo','Company Reg Number','Enter Registration Num Here','',4,"",'supplier','regno','oldsupplier');
+                                 textField('supplierform','txtComName','Company Name','Enter Company name Here','',4,"",'supplier','companyName','oldsupplier');
+                                 textField('supplierform','txtContactName','Contact Name','Enter Contact Name Here','',4,"",'supplier','contactName','oldsupplier');
+                                 textField('supplierform','txtMobile','Mobile','Enter Mobile Number Here','',4,"",'supplier','mobile','oldsupplier');
+                                 textField('supplierform','txtTel','Telephone','Enter Telephone Number Here','',4,"",'supplier','tel','oldsupplier');
+                                 textField('supplierform','txtEmail','Email','Enter Email Here','',4,"",'supplier','email','oldsupplier');
+                                 textArea('supplierform','','Address','Enter Address Here','',4,"",'supplier','','oldsupplier');
+                                 textField('supplierform','txtNIC','NIC','Enter NIC Here','',4,"",'supplier','nic','oldsupplier');
+                                 dateField('supplierform','dateReg','Reg Date','Select Registered Date',4,"",'supplier','date','oldsupplier');
+                                 comboBox('supplierform','cmbSupStatus','Supplier Status',4,'supplier','supplierstatusId','oldsupplier');
+                                 comboBox('supplierform','cmbEmployee','Employee Introduced',4,'supplier','empIntroduced','oldsupplier');
+
+                                </script>
+
+
+
+
+                                <div class="text-right">
+                                    <input class="btn btn-primary btn-sm" type="button" id="btnAdd" value="Add" style="width: 17%"/>
+                                    <input class="btn btn-primary btn-sm" type="button" id="btnUpdate" value="Update" style="width: 15%"/>
+                                    <input class="btn btn-secondary btn-sm" type="button" id="btnClear" value="Clear" style="width: 15%"/>
+                                    <input class="btn btn-secondary btn-sm" type="button" id="btnDelete" value="Delete" style="width: 15%"/>
+                                </div>
+
+
+                            </form>
+                        </div>
+
+                        <div class="col-md-1"></div>
+
+                        <div class="col-md-7" id="supplierview">
+                            <form class="form-inline" onsubmit="return false">
+                                <div class="form-group form-group-sm">
+                                    <input placeholder="Search By Name" class="form-control" type="text" id="txtSearchName"/>
+                                </div>
+                                <div class="form-group form-group-sm">
+                                    <input placeholder="Search By NIC" class="form-control" type="text" id="txtSearchNIC"/>
+                                </div>
+                                <div class="form-group form-group-sm">
+                                    <select class="form-control" id="cmbSearchDesignation"></select>
+                                </div>
+                                <div class="form-group form-group-sm">
+                                    <select class="form-control" id="cmbSearchEmployeestatus"></select>
+                                </div>
+
+                                <input type="button" class="btn btn-primary btn-sm" value="Search" id="btnSearch"/>
+                                <input type="button" class="btn btn-secondary btn-sm" value="Clear" id="btnSearchClear"/>
+
+                            </form>
+                            <hr/>
+                            <div class="table-responsive" id="tableParent">
+
+                                <script>
+
+                                    function getNameColumn(ob) {
+                                        return ob.callingname+"("+ob.number+")";
+                                    }
+
+                                    var metadata = [
+                                        {name:'Company Name',search:true,datatype:'text',property:'companyName'},
+                                        {name:'Contact Name',search:true,datatype:'text',property:'contactName'},
+                                        {name:'Mobile',search:true,datatype:'text',property:'mobile'},
+                                        {name:'Tel',search:true,datatype:'text',property:'tel'},
+                                        {name:'Email',search:false,datatype:'text',property:'email'}
+                                    ];
+                                    table("tableParent","tblSupplier",metadata,[3,10,15,30,500,1000],btnSearchMC,true);
+
+                                </script>
+
+
+                            </div>
+                            <ul id="pagination" class="pagination"></ul>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="panel-footer">
+                    <div id="err">
+                        <h3>Error Log</h3>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

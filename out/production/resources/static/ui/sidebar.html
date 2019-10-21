@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <meta content="IE=edge" http-equiv="X-UA-Compatible">
+
+    <title>Asset Management System</title>
+
+    <link href="../plugin/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+
+    <link href="../style/common.css" rel="stylesheet"/>
+
+    <!--Sidebar CSS-->
+    <link href="../style/sidebar.css" rel="stylesheet"/>
+
+    <script src="../script/common.bitproject.earth.lk.v1.js"></script>
+    <script src="../script/ui.bitproject.earth.lk.v1.js"></script>
+
+
+    <script>
+
+        window.addEventListener("load", initialize);
+
+        function initialize() {
+            spnUsername.innerHTML = " " + session.getObject("user").customerId.fname;
+            laodUi("home");
+
+        }
+
+        function laodUi(ui) {
+            frmMainWindow.src = 'http://localhost:8080/ui/' + ui;
+        }
+
+        function changePassword() {
+            if (window.confirm("Do you need to change the Password ?")) {
+                cookie.setValue("username", "", 1);
+                cookie.setValue("password", "", 1);
+                session.setObject("user", new Object());
+                window.open("changepassword", "_self");
+            }
+        }
+
+
+        function logout() {
+            if (window.confirm("Do you need to logout ?")) {
+
+
+                ajax = new XMLHttpRequest();
+                ajax.open("PUT", "/session", false);
+                // ajax.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+                ajax.send();
+                err.innerHTML = err.innerHTML + ajax.responseText;
+
+                if (ajax.status == 200 && ajax.responseText != "") {
+                    responce = ajax.responseText;
+                    cookie.setValue("username", "", 1);
+                    cookie.setValue("password", "", 1);
+                    session.setObject("user", new Object());
+                    window.alert(responce);
+                    window.open("login2", "_self");
+                } else
+                    window.alert("Failed to logout");
+
+
+            }
+        }
+
+        $(document).ready(function () {
+            $('ul.nav li.dropdown').hover(function () {
+                $(this).find('.dropdown-menu').stop(true, true).delay(200).fadeIn(10);
+            }, function () {
+                $(this).find('.dropdown-menu').stop(true, true).delay(200).fadeOut(10);
+            });
+        });
+
+
+    </script>
+</head>
+<body>
+
+<!-- Page Content Holder -->
+
+<div id="content" style="position: inherit; width:100%;">
+
+    <!--top navigation bar-->
+    <nav class="navbar ">
+
+     <!--   <a class="navbar-brand" href="#">
+            <img class="img-rounded" src="../image/logo.jpg" style="width: 100px; ">
+        </a>-->
+        <button class="navbar-btn" id="sidebarCollapse" type="button">
+            <i class="glyphicon glyphicon-menu-hamburger"></i>
+            <span><h4>Menu</h4></span>
+        </button>
+        <button class="navbar-btn " id="btnlist" type="button">
+            <i class="glyphicon glyphicon-list"></i>
+            <span><h4>List of Assets</h4></span>
+        </button>
+        <button class="navbar-btn" id="btnadd" type="button" onclick="laodUi('asset')">
+            <i class="glyphicon glyphicon-plus"></i>
+            <span><h4>Add an Aseet</h4></span>
+        </button>
+
+        <ul class="nav navbar-nav navbar-right">
+
+            <li onclick="changePassword()"><a href="#"> <span class="glyphicon glyphicon-lock"> </span> Change Password
+            </a></li>
+            <li onclick="logout()"><a href="#"> <span class="glyphicon glyphicon-log-out"> </span> Logout </a></li>
+        </ul>
+
+    </nav>
+    <!--End of top navigation bar-->
+
+    <!--Sidebar-->
+    <div class="container-fluid" style="margin-top: -10px">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="row" style="position:relative">
+                    <div style="float: left;">
+                        <div class="wrapper">
+
+                            <!-- Sidebar Header -->
+                            <nav id="sidebar" style="background-color:#3b4652 ">
+                                <div class="sidebar-header  sidebar-fixed">
+                                    <h3>ASSET MANAGER</h3>
+                                </div>
+
+                                <ul class="list-unstyled components">
+                                    <li class="active" onclick="laodUi('home')">
+                                        <a href="#">
+                                            <i class="glyphicon glyphicon-dashboard "></i>
+                                            Dashboard
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a aria-expanded="false" data-toggle="collapse" href="#assetSubmenu">
+                                            <i class="glyphicon glyphicon-tags"></i>
+                                            Asset
+                                        </a>
+                                        <ul class="collapse list-unstyled" id="assetSubmenu">
+                                            <li onclick="laodUi('asset')"><a>Edit Asset Details</a></li>
+                                            <li onclick="laodUi('checkin')"><a>Asset Check In</a></li>
+                                            <li onclick="laodUi('checkout')"><a>Asset Check Out</a></li>
+                                            <li onclick="laodUi('reserve')"><a>Reserve</a></li>
+                                            <li onclick="laodUi('dispose')"><a>Dispose</a></li>
+                                        </ul>
+                                    </li>
+                                    <li>
+                                    <a aria-expanded="false" data-toggle="collapse" href="#adminSubmenu">
+                                        <i class="glyphicon glyphicon-cog"></i>
+                                        Advanced
+                                    </a>
+                                    <ul class="collapse list-unstyled" id="adminSubmenu">
+                                        <li onclick="laodUi('employee')"><a>Employee</a></li>
+                                        <li onclick="laodUi('user')"><a>User</a></li>
+                                        <li onclick="laodUi('supplier')"><a>Supplier</a></li>
+                                        <li onclick="laodUi('previlage')"><a>Privilages</a></li>
+                                        <li onclick="laodUi('designation')"><a>Designation</a></li>
+                                    </ul>
+                                </li>
+                                    <li>
+                                        <a aria-expanded="false" data-toggle="collapse" href="#productSubmenu">
+                                            <i class="glyphicon glyphicon-briefcase"></i>
+                                            Setup
+                                        </a>
+                                        <ul class="collapse list-unstyled" id="productSubmenu">
+                                            <li onclick="laodUi('category')"><a>Categories</a></li>
+                                            <li onclick="laodUi('subcategory')"><a>Sub Categories</a></li>
+                                            <li onclick="laodUi('brand')"><a>Brands</a></li>
+                                            <li onclick="laodUi('model')"><a>Models</a></li>
+                                            <li onclick="laodUi('branch')"><a>Branches</a></li>
+                                            <li onclick="laodUi('location')"><a>Locations</a></li>
+                                        </ul>
+                                        <!--<a aria-expanded="false" data-toggle="collapse" href="#pageSubmenu">
+                                            <i class="glyphicon glyphicon-usd"></i>
+                                            Purchase
+                                        </a>
+                                        <ul class="collapse list-unstyled" id="pageSubmenu">
+                                            <li><a href="#">Purchase</a></li>
+                                            <li><a href="#">GRN</a></li>
+                                            <li onclick="laodUi('supplier')"><a href="#">Supplier</a></li>
+                                            <li onclick="laodUi('meterial')"><a href="#">Meterial</a></li>
+                                            <li><a href="#">Invoice</a></li>
+                                        </ul>-->
+                                    </li>
+                                    <li>
+                                        <a href="#">
+                                            <i class="glyphicon glyphicon-question-sign"></i>
+                                            FAQ
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="#">
+                                            <i class="glyphicon glyphicon-phone"></i>
+                                            Contact
+                                        </a>
+                                    </li>
+                                </ul>
+
+                                <ul class="list-unstyled CTAs">
+
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+                    <div style="overflow: auto; margin-top: -5px">
+                        <iframe id="frmMainWindow" style=" width:100%;height:605px;border:0;"></iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+<div id="err"></div>
+
+
+<script src="../plugin/jquery/jquery.min.js"></script>
+<script src="../plugin/bootstrap/js/bootstrap.min.js"></script>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#sidebarCollapse').on('click', function () {
+            $('#sidebar').toggleClass('active');
+        });
+    });
+</script>
+</body>
+</html>

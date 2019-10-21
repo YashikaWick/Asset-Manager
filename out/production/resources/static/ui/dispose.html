@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Asset Management System</title>
+    <link rel="stylesheet" href="../plugin/bootstrap/css/bootstrap.min.css"/>
+    <script src="../plugin/jquery/jquery.min.js"></script>
+    <script src="../plugin/bootstrap/js/bootstrap.min.js"></script>
+
+    <link rel="stylesheet" href="../style/common.css"/>
+    <link rel="stylesheet" href="../style/btn-bs4.css"/>
+    <script src="../script/common.bitproject.earth.lk.v1.js"></script>
+    <script src="../script/ui.bitproject.earth.lk.v1.js"></script>
+
+    <script>
+
+        window.addEventListener("load", initialize);
+
+        /**
+         * initialize buttons
+         */
+        function initialize() {
+          /*  btnAdd.addEventListener("click",btnAddMC);
+            btnClear.addEventListener("click",btnClearMC);
+            btnUpdate.addEventListener("click",btnUpdateMC);
+            btnDelete.addEventListener("click",btnDeleteMC);
+            btnSearch.addEventListener("click",btnSearchMC);
+            btnSearchClear.addEventListener("click",btnSearchClearMC);
+
+            privilages = httpRequest("../privilages?module=ASSET","GET");
+
+            cmbCategory.addEventListener("change",cmbCategoryCH);
+            cmbSubCategory.addEventListener("change",cmbSubCategoryCH);
+            cmbBrand.addEventListener("change",cmbBrandCH);
+
+
+            regexes = httpRequest("../regexes/asset","GET");
+            txtSerialNum.setAttribute("data-pattern",regexes.serialNumber.regex);
+            txtName.setAttribute("data-pattern",regexes.name.regex);
+            txtPurchasePrice.setAttribute("data-pattern",regexes.purchasePrice.regex);
+            txtDescription.setAttribute("data-pattern",regexes.description.regex);
+
+            categories = httpRequest("../categories/list","GET");
+            assetstatuses = httpRequest("../assetstatuses/list","GET");
+            branches = httpRequest("../branches/list","GET");
+            employees = httpRequest("../employees/list","GET");
+
+
+            valid = "#c2ffb2";
+            invalid = "#ffe1e1";
+            initial = "white";
+            updated = "#fcf5b5";
+            active = "#fcf5b5";
+*/
+            loadView();
+            loadForm();
+        }
+
+        /**
+         * Load the view of table
+         */
+        function loadView() {
+
+            //Search Area
+           /* txtSearchName.value="";
+            txtSearchSNum.value="";
+            fillCombo(cmbSearchCategory,"Category",categories,"name","");
+            fillCombo(cmbSearchAssetstatus,"Status",assetstatuses,"name","");
+            cmbSearchAssetstatus.style.background = "";
+            cmbSearchCategory.style.background = "";
+            txtSearchName.style.background = "";
+            txtSearchSNum.style.background = "";*/
+
+
+            //Table Area
+            activerowno = "";
+            activepage = 1;
+            var query = "&name=&serialnumber=&categoryId=&assetstatusid=";
+            loadTable(1,cmbPageSize.value,query);
+        }
+
+        /**
+         * load the table
+         * @param page
+         * @param size
+         * @param query
+         */
+        function loadTable(page,size,query) {
+            page = page - 1;
+            assets = new Array();
+            var data = httpRequest("/assets?page="+page+"&size="+size+query,"GET");
+            if(data.content!= undefined) assets = data.content;
+            createPagination('pagination',data.totalPages, data.number+1,paginate);
+            fillTable('tblAsset',assets,fillForm);
+            clearSelection(tblAsset);
+            if(activerowno!="")selectRow(tblAsset,activerowno,active);
+            window.location.href="#ui";
+        }
+
+        /**
+         *
+         * @param page
+         */
+        function paginate(page) {
+            var paginate;
+            if(oldemployee==null){
+                paginate=true;
+            }else{
+                if(getErrors()==''&&getUpdates()==''){
+                    paginate=true;
+                }else{
+                    paginate = window.confirm("Form has Some Errors or Update Values. " +
+                        "Are you sure to discard that changes ?");
+                }
+            }
+            if(paginate) {
+                activepage=page;
+                activerowno=""
+                loadSearchedTable();
+                loadForm();
+            }
+
+        }
+
+        /**
+         * Form to enter details of asset
+         */
+        function loadForm() {
+            asset = new Object();
+            oldasset = null;
+
+            fillCombo(cmbCategory,"Select Category",categories,"name","");
+            fillCombo(cmbSubCategory,"Select Sub Category","","name","");
+            fillCombo(cmbBrand,"Select Brand","","name","");
+            fillCombo(cmbassetStatus,"Select Asset Status",assetstatuses,"name","");
+            fillCombo(cmbBranch,"Select Branch",branches,"name","");
+            fillCombo(cmbCurLoc,"Select Current Location",branches,"name","");
+            fillCombo(cmbEmployee,"Select",employees,"callingname",session.getObject("user").employeeId.callingname);
+            asset.empIntroduced = JSON.parse(cmbEmployee.value);
+            cmbEmployee.disabled = "disable";
+            fillCombo(cmbHolder,"Select",employees,"callingname",session.getObject("user").employeeId.callingname);
+            asset.holderId = JSON.parse(cmbHolder.value);
+
+            cmbBrand.disabled = "disabled";
+            cmbSubCategory.disabled = "disabled";
+
+            //setting today's date
+            var today = new Date();
+            var month = today.getMonth()+1;
+            if(month<10) month = "0"+month;
+            var date = today.getDate()+1;
+            if(date<10) date = "0"+date;
+            dteDOIntroduced.value=today.getFullYear()+"-"+month+"-"+date;
+            asset.dointroduced=dteDOIntroduced.value;
+            dteDOIntroduced.style.background=valid;
+            dteDOIntroduced.disabled = "disabled";
+
+            txtAssetCode.value = "";
+            txtName.value = "";
+            txtSerialNum.value="";
+            txtPurchasePrice.value = "";
+            txtDescription.value = "";
+            removeFile('flePhoto');
+
+            setStyle(initial);
+
+            disableButtons(false, true, true);
+        }
+
+        // Binding and Validation Functions for Non-Regex-Based
+        // When Regex-Based default validation is used, programmers do not need to define these functions
+        // Default Validation and Binding is coded in "ui.bitproject.earth.lk.js"
+        function cmbCategoryCH(){
+            cmbSubCategory.disabled = "";
+            cmbBrand.disabled="disabled";
+            var subcategories = httpRequest("../subcategories/listbycategory?categoryId="+JSON.parse(cmbCategory.value).id ,"GET");
+            fillCombo(cmbSubCategory,"Select a Sub Category",subcategories,"name","");
+
+            var brands = httpRequest("../brands/listbycategory?categoryId="+JSON.parse(cmbCategory.value).id ,"GET");
+            fillCombo(cmbBrand,"Select a Brand",brands,"name","");
+
+            if (oldasset != null && oldasset.subcategoryId.categoryId.name != JSON.parse(cmbCategory.value).name){
+                cmbCategory.style.background = updated;
+            }else {
+                cmbCategory.style.background = valid;
+            }
+        }
+
+        function cmbBrandCH() {
+            cmbSubCategory.disabled="";
+
+            txtName.value= JSON.parse(cmbBrand.value).name+"-"+JSON.parse(cmbSubCategory.value).name;
+            asset.name = txtName.value;
+            txtName.style.background = valid;
+
+        }
+
+        function cmbSubCategoryCH() {
+            cmbBrand.disabled = "";
+            txtName.value= JSON.parse(cmbBrand.value).name+"-"+JSON.parse(cmbSubCategory.value).name;
+        }
+
+
+
+        /**
+         * set Styles for the fields of the form
+         * @param style
+         */
+        function setStyle(style) {
+
+            txtAssetCode.style.background = style;
+            cmbCategory.style.background = style;
+            cmbSubCategory.style.background = style;
+            cmbBrand.style.background = style;
+            txtSerialNum.style.background = style;
+            txtName.style.background = style;
+            cmbBranch.style.background = style;
+            cmbCurLoc.style.background = style;
+            txtPurchasePrice.style.background = style;
+            cmbassetStatus.style.background = style;
+            txtDescription.style.background = style;
+
+        }
+
+        /**
+         * define the buttons to be disabled
+         * @param add
+         * @param upd
+         * @param del
+         */
+        function disableButtons(add, upd, del) {
+
+            if (add || !privilages.add) btnAdd.setAttribute("disabled", "disabled");
+            else btnAdd.removeAttribute("disabled");
+
+            if (upd || !privilages.update) btnUpdate.setAttribute("disabled", "disabled");
+            else btnUpdate.removeAttribute("disabled");
+
+            if (del || !privilages.delete) btnDelete.setAttribute("disabled", "disabled");
+            else btnDelete.removeAttribute("disabled");
+
+        }
+
+
+        // Binding and Validation Functions for Non-Regex-Based
+        // When Regex-Based default validation is used, programmers do not need to define these functions
+        // Default Validation and Binding is coded in "ui.bitproject.earth.lk.js"
+
+
+        /**
+         * return error messages
+         * @returns {string}
+         */
+        function getErrors() {
+
+            var errors = "";
+
+            if(cmbCategory.value == "")
+                errors = errors + "\n" + "Asset category not selected";
+
+            if(asset.subcategoryId == null)
+                errors = errors + "\n" + "Sub Category not selected";
+
+            if(asset.brandId == null)
+                errors = errors + "\n" + "Brand not selected";
+
+            if (asset.serialNumber == null)
+                errors = errors + "\n" + regexes.serialNumber.message;
+
+            if (asset.name == null)
+                errors = errors + "\n" + regexes.name.message;
+
+            if (asset.branchId == null)
+                errors = errors + "\n" + "Branch not selected";
+
+            if (asset.currentLocation == null)
+                errors = errors + "\n" + "Current location not selected";
+
+            if (asset.purchasePrice == null)
+                errors = errors + "\n" + regexes.purchasePrice.message;
+
+            if (asset.dointroduced == null)
+                errors = errors + "\n" + "Invalid Introduced Date ";
+
+            if (asset.description == null && txtDescription.value!="")
+                errors = errors + "\n" + regexes.description.message;
+
+            if (asset.assetstatusId == null)
+                errors = errors + "\n" + "Asset status not selected";
+
+            if (asset.empIntroduced == null)
+                errors = errors + "\n" + "Employee introduced not selected";
+
+            if (asset.holderId == null)
+                errors = errors + "\n" + "Asset holder not selected";
+
+            return errors;
+        }
+
+        function btnAddMC() {
+
+            var errors = getErrors();
+
+            if(errors=="") {
+                var option = window.confirm("Are you sure to add following Asset ?\n" +
+                    "\nCategory         : " + JSON.parse(cmbCategory.value).name+
+                    "\nSub Category     : " + asset.subcategoryId.name +
+                    "\nBrand            : " + asset.brandId.name +
+                    "\nSerial Number    : " + asset.serialNumber +
+                    "\nAsset Name       : " + asset.name +
+                    "\nBranch           : " + asset.branchId.name +
+                    "\nCurrent Location : " + asset.currentLocation.name +
+                    "\nPhoto            : " + asset.photo +
+                    "\nPurchase Price   : " + asset.purchasePrice +
+                    "\nIntroduced Date  : " + asset.dointroduced +
+                    "\nAsset Status     : " + asset.assetstatusId.name+
+                    "\nDescription      : " + asset.description +
+                    "\nHolder           : " + asset.holderId.callingname +
+                    "\nEmployee         : " + asset.empIntroduced.callingname );
+
+                if(option==true) {
+                    var response = httpRequest("/assets","POST",asset);
+                    if(response=="0"){
+                        toast("<strong>Success!</strong> Saved Successfully","success");
+                        loadForm();
+                        activerowno = 1;
+                        loadSearchedTable();
+                    }
+                    else window.alert("Failed to Add as \n\n"+response);
+                }
+
+            }
+            else
+            { window.alert("You have following Errors\n"+errors); }
+
+        }
+
+        /**
+         * actions to be done when click on clear button
+         */
+        function btnClearMC() {
+            //Get Cofirmation from the User window.confirm();
+            var clear;
+            if(oldasset==null){
+                clear=true;
+            }else{
+                if(getErrors()==''&&getUpdates()==''){
+                    clear=true;
+                }else{
+                    clear = window.confirm("Form has Some Errors or Update Values. " +
+                        "Are you sure to discard that changes ?");
+                }
+            }
+            if(clear) {
+                loadForm();
+                clearSelection(tblAsset);
+            }
+
+        }
+
+        /**
+         * fill in the form with user details
+         * @param ast
+         * @param rowno
+         */
+        function fillForm(ast,rowno){
+            activerowno = rowno;
+            var filling;
+            if(oldasset==null){
+                filling=true;
+            }else{
+
+                if(getErrors()==''&&getUpdates()==''){
+                    filling=true;
+                }else{
+                    filling = window.confirm("Form has Some Errors or Update Values. " +
+                        "Are you sure to discard that changes ?");
+                }
+            }
+
+            if(filling) {
+
+                clearSelection(tblAsset);
+                selectRow(tblAsset,activerowno,active);
+
+                asset = JSON.parse(JSON.stringify(ast));
+                oldasset = JSON.parse(JSON.stringify(ast));
+
+
+
+                txtAssetCode.value = asset.assetcode;
+                txtAssetCode.disabled = "disabled";
+                txtSerialNum.value = asset.serialNumber;
+                txtSerialNum.disabled = "disabled";
+                txtName.value = asset.name;
+                txtPurchasePrice.value = asset.purchasePrice;
+                dteDOIntroduced.value = asset.dointroduced;
+                txtDescription.value = asset.description;
+                setDefaultFile('flePhoto', asset.photo);
+
+                fillCombo(cmbCategory, "Select Category", categories, "name", asset.subcategoryId.categoryId.name);
+                cmbCategory.disabled="";
+
+                var subcategories = httpRequest("../subcategories/listbycategory?categoryId="+JSON.parse(cmbCategory.value).id ,"GET");
+                fillCombo(cmbSubCategory,"Choose a Sub Category",subcategories,"name",asset.subcategoryId.name);
+                cmbSubCategory.disabled = "";
+                var brands = httpRequest("../brands/listbycategory?categoryId="+JSON.parse(cmbCategory.value).id ,"GET");
+                fillCombo(cmbBrand,"Choose a Designation",brands,"name",asset.brandId.name);
+                cmbBrand.disabled = "";
+
+                fillCombo(cmbBranch, "Select branch", branches, "name", asset.branchId.name);
+                fillCombo(cmbCurLoc, "Select location", branches, "name", asset.currentLocation.name);
+                fillCombo(cmbassetStatus, "Select status", assetstatuses, "name", asset.assetstatusId.name);
+                fillCombo(cmbHolder, "Select holder", employees, "callingname", asset.holderId.callingname);
+                fillCombo(cmbEmployee, "Select employee", employees, "callingname", asset.empIntroduced.callingname);
+
+                disableButtons(true, false, false);
+                setStyle(valid);
+            }
+
+        }
+
+        function getUpdates() {
+
+            var updates = "";
+
+          if(asset!=null && oldasset!=null) {
+
+              if (asset.assetcode != oldasset.assetcode)
+                  updates = updates + "\nAsset Code is Changed";
+
+              if (asset.subcategoryId.name != oldasset.subcategoryId.name)
+                  updates = updates + "\nSub category is Changed";
+
+              if (asset.serialNumber != oldasset.serialNumber)
+                  updates = updates + "\nSerial Number is Changed";
+
+              if (asset.name != oldasset.name)
+                  updates = updates + "\nAsset name is Changed";
+
+              if (asset.branchId.name != oldasset.branchId.name)
+                  updates = updates + "\nBranch is Changed";
+
+              if (asset.currentLocation.name != oldasset.currentLocation.name)
+                  updates = updates + "\nCurrent Location is Changed";
+
+              if (asset.photo != oldasset.photo)
+                  updates = updates + "\nPhoto is Changed";
+
+              if (asset.purchasePrice != oldasset.purchasePrice)
+                  updates = updates + "\nPurchase price is Changed";
+
+              if (asset.dointroduced != oldasset.dointroduced)
+                  updates = updates + "\nIntroduced date is Changed";
+
+              if (asset.assetstatusId.name != oldasset.assetstatusId.name)
+                  updates = updates + "\nAsset Status is Changed";
+
+              if (asset.description != oldasset.description)
+                  updates = updates + "\nDescription is Changed";
+
+              if (asset.holderId.callingname != oldasset.holderId.callingname)
+                  updates = updates + "\nAsset holder is Changed";
+
+              if (asset.empIntroduced.callingname != oldasset.empIntroduced.callingname)
+                  updates = updates + "\nEmployee introduced is Changed";
+
+          }
+
+            return updates;
+
+        }
+
+        function btnUpdateMC() {
+            var errors = getErrors();
+            if (errors == "") {
+                var updates = getUpdates();
+                if (updates == "") window.alert("Nothing Updated!");
+                else {
+
+                    var option = window.confirm("\n\nAre your sure to update followings ! \n\n" + updates);
+                    if(option==true) {
+                        var response = httpRequest("/assets","PUT",asset);
+                        if(response=="0"){
+                            toast("<strong>Success !</strong> Updated Successfully","success");
+                            loadForm();
+                            loadSearchedTable();
+
+                        }
+                        else window.alert("Failed to Update as \n\n"+response);
+                    }
+
+
+                }
+            }
+            else
+                window.alert("You have following errors in your form\n\n"+getErrors());
+        }
+
+        function btnDeleteMC() {
+
+
+            var option = window.confirm("\n\nAre your sure to delete following ! \n\n" +
+                "Asset Code : " +asset.assetcode+ "\nName : " +asset.name);
+
+            if(option==true) {
+                var response = httpRequest("/assets","DELETE",asset);
+                if(response=="0"){
+                    toast("<strong>Success !</strong> Deleted Successfully","success");
+                    loadForm();
+                    loadSearchedTable();
+
+                }
+                else window.alert("Failed to Delete as \n\n"+response);
+            }
+
+        }
+
+
+        //Search Functions
+
+        function loadSearchedTable() {
+
+            var code = txtSearchCode.value;
+            var name = txtSearchName.value;
+            var serialNum = txtSearchSNum.value;
+            var category = cmbSearchCategory.value;
+
+            var categoryid="";
+            if(category!="Category")
+            { categoryid = JSON.parse(category).id;
+                cmbSearchCategory.style.background = active;}
+
+            if(code!=""){  txtSearchCode.style.background = active; }
+            if(name!=""){  txtSearchName.style.background = active; }
+            if(serialNum!=""){  txtSearchSNum.style.background = active; }
+
+            var query ="&code=&name=&serialNum=&categoryid=";
+
+            if(code!="" || name!="" || serialNum!="" || categoryid!="" )
+                query = "&code=" + code + "&name=" + name + "&serialNum=" + serialNum + "&categoryid=" + categoryid;
+
+            //window.alert(query);
+            loadTable(activepage, cmbPageSize.value, query);
+
+        }
+
+        function btnSearchMC(){
+            activepage=1;
+            loadSearchedTable();
+        }
+
+        function btnSearchClearMC(){
+            loadView();
+        }
+
+        //to display a popup form to add new category
+        function btnNewCatMC(){}
+
+        //to display a popup form to add new sub category
+        function btnNewSubCatMC(){}
+
+        //to display a popup form to add new brand
+        function btnNewBrandMC(){}
+
+    </script>
+
+</head>
+
+<body>
+<div class="container-fluid">
+    <div class="row" id="ui">
+        <div class="col-md-12">
+            <div class="panel panel-default" style="margin-top: 10px;">
+                <div class="panel-heading">
+                    <h3>Asset Dispose</h3>
+                </div>
+
+                <div class="panel-body" >
+                    <div class="row">
+
+                    </div>
+                    <div class="row">
+
+                        <div class="col-md-4" id="form">
+                            <form class="form-horizontal" onsubmit="return false" id="disposeform" >
+
+                                <div id="innerform" style="background-color: rgba(0,0,255,0.1); padding:20px 10px;margin-bottom: 15px">
+
+                                    <script>
+                                        textField('innerform','txtAssetCode','Asset Code','Asset Code','',4,"",'asset','assetcode','oldasset');
+                                        textField('innerform','txtName','Asset Name','Asset Code','',4,"",'asset','assetcode','oldasset');
+                                        comboBox('innerform','','Current status',4,'asset','','oldasset');
+                                        textArea('innerform','txtDescription','Description','Enter notes Here','',4,"",'asset','description','oldasset');
+                                    </script>
+                                    <div class="text-right">
+                                        <input class="btn btn-primary btn-sm" type="button" id="btnAdd" value="Add" style="width: 15%"/>
+                                    </div>
+                                    <hr/>
+                                    <div class="table-responsive" id="tableInnerParent">
+
+                                        <script>
+                                            var metadatainnertable = [
+                                                {name:'Code',search:false,datatype:'text',property:'assetcode'},
+                                                {name:'SubCategory',search:false,datatype:'text',property:'serialNumber'},
+                                                {name:'Brand',search:false,datatype:'text',property:'brandId.name'},
+                                                {name:'Model',search:false,datatype:'text',property:'brandId.name'},
+                                                {name:'Name',search:false,datatype:'text',property:'name'}
+                                            ];
+                                            tableForInnerForm("tableInnerParent","tblAsset",metadatainnertable,false);
+
+                                        </script>
+
+
+                                    </div>
+                                </div>
+                                <script>
+                                    comboBox('disposeform','','New Asset status',4,'asset','','oldasset');
+                                    dateField('disposeform','','Disposed date','Select Date',4,"",'asset','','oldasset');
+                                    textArea('disposeform','txtDescription','Dispose Notes','Enter notes Here','',4,"",'asset','description','oldasset');
+                                    comboBox('disposeform','cmbEmployee','Employee',4,'asset','employeeId','oldasset');
+                                </script>
+
+                                <div class="text-right">
+                                    <input class="btn btn-primary btn-sm" type="button" id="btnSubmit" value="Submit" style="width: 15%"/>
+                                    <input class="btn btn-secondary btn-sm" type="button" id="btnClear" value="Cancel" style="width: 15%"/>
+                                </div>
+
+
+                            </form>
+                        </div>
+
+                        <div class="col-md-1">
+
+                        </div>
+
+                        <div class="col-md-7" id="assetview">
+                            <form class="form-inline" onsubmit="return false">
+                                <div class="form-group form-group-sm">
+                                    <input placeholder="Search By Code" class="form-control" type="text" id="txtSearchCode"/>
+                                </div>
+                                <div class="form-group form-group-sm">
+                                    <input placeholder="Search By Name" class="form-control" type="text" id="txtSearchName"/>
+                                </div>
+                                <div class="form-group form-group-sm">
+                                    <input placeholder="Search By Serial No" class="form-control" type="text" id="txtSearchSNum"/>
+                                </div>
+                                <div class="form-group form-group-sm">
+                                    <select class="form-control" id="cmbSearchCategory"></select>
+                                </div>
+
+                                <input type="button" class="btn btn-primary btn-sm" value="Search" id="btnSearch"/>
+                                <input type="button" class="btn btn-secondary btn-sm" value="Clear" id="btnSearchClear"/>
+
+                            </form>
+                            <hr/>
+                            <div class="table-responsive" id="tableParent">
+
+                                <script>
+                                    var metadata = [
+                                        {name:'Code',search:true,datatype:'text',property:'assetcode'},
+                                        {name:'SubCategory',search:true,datatype:'text',property:'serialNumber'},
+                                        {name:'Brand',search:true,datatype:'text',property:'brandId.name'},
+                                        {name:'Model',search:true,datatype:'text',property:'brandId.name'},
+                                        {name:'Name',search:true,datatype:'text',property:'name'},
+                                        {name:'Status',search:true,datatype:'text',property:'assetstatusId.name'}
+                                    ];
+                                    table("tableParent","tblAsset",metadata,[3,10,15,30,500,1000],btnSearchMC,true);
+
+                                </script>
+
+
+                            </div>
+                            <ul id="pagination" class="pagination"></ul>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="panel-footer">
+                    <div id="err">
+                        <h3>Error Log</h3>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
